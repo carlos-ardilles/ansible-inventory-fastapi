@@ -1,0 +1,1 @@
+# Arquivo __init__.py para garantir que o pacote seja reconhecido
