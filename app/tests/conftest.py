@@ -6,13 +6,16 @@ from sqlalchemy import text
 
 from app.main import app
 from app.db.session import get_session
-from app.models.inventory import Group, Host, GroupVar, HostVar
+from app.models.inventory import Group, Host, GroupVar, HostVar, HostGroupLink
 
 # Criar um banco de dados SQLite em arquivo para testes
 TEST_DATABASE_URL = "sqlite:///./test.db"
-test_engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
+test_engine = create_engine(TEST_DATABASE_URL, connect_args={
+                            "check_same_thread": False})
 
 # Criar tabelas antes dos testes
+
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     """Configura o banco de dados de teste antes dos testes e limpa depois."""
@@ -23,11 +26,13 @@ def setup_test_db():
     if os.path.exists("./test.db"):
         os.unlink("./test.db")
 
+
 @pytest.fixture(autouse=True, scope="function")
 def clean_tables():
     """Limpar todas as tabelas antes de cada teste."""
     with Session(test_engine) as session:
         # Usar text() para declarações SQL literais
+        session.exec(text("DELETE FROM host_group_membership"))
         session.exec(text("DELETE FROM group_vars"))
         session.exec(text("DELETE FROM host_vars"))
         session.exec(text("DELETE FROM hosts"))
@@ -35,11 +40,13 @@ def clean_tables():
         session.commit()
     yield
 
+
 @pytest.fixture(name="session")
 def session_fixture():
     """Fixture que fornece uma sessão de banco de dados de teste."""
     with Session(test_engine) as session:
         yield session
+
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
@@ -56,12 +63,13 @@ def client_fixture(session: Session):
     # Limpar sobrescritas após o teste
     app.dependency_overrides = {}
 
+
 @pytest.fixture(name="test_data")
 def test_data_fixture(session: Session):
     """Fixture que carrega dados de teste no banco de dados."""
     # Criar grupos
-    group1 = Group(name="webservers", description="Web servers group")
-    group2 = Group(name="dbservers", description="Database servers group")
+    group1 = Group(name="webservers")
+    group2 = Group(name="dbservers")
     session.add(group1)
     session.add(group2)
     session.commit()
@@ -69,9 +77,27 @@ def test_data_fixture(session: Session):
     session.refresh(group2)
 
     # Criar hosts
-    host1 = Host(name="web1", ip_address="192.168.1.10", group_id=group1.id)
-    host2 = Host(name="web2", ip_address="192.168.1.11", group_id=group1.id)
-    host3 = Host(name="db1", ip_address="192.168.1.20", group_id=group2.id)
+    host1 = Host(
+        hostname="web1",
+        ansible_host="192.168.1.10",
+        ansible_port=22,
+        ansible_user="admin",
+        ansible_connection="ssh"
+    )
+    host2 = Host(
+        hostname="web2",
+        ansible_host="192.168.1.11",
+        ansible_port=22,
+        ansible_user="admin",
+        ansible_connection="ssh"
+    )
+    host3 = Host(
+        hostname="db1",
+        ansible_host="192.168.1.20",
+        ansible_port=22,
+        ansible_user="dbadmin",
+        ansible_connection="ssh"
+    )
     session.add(host1)
     session.add(host2)
     session.add(host3)
@@ -80,18 +106,32 @@ def test_data_fixture(session: Session):
     session.refresh(host2)
     session.refresh(host3)
 
+    # Criar relações entre hosts e grupos
+    host_group1 = HostGroupLink(host_id=host1.id, group_id=group1.id)
+    host_group2 = HostGroupLink(host_id=host2.id, group_id=group1.id)
+    host_group3 = HostGroupLink(host_id=host3.id, group_id=group2.id)
+    session.add(host_group1)
+    session.add(host_group2)
+    session.add(host_group3)
+    session.commit()
+
     # Criar variáveis de grupo
-    group_var1 = GroupVar(key="ansible_user", value="admin", group_id=group1.id)
-    group_var2 = GroupVar(key="http_port", value="80", group_id=group1.id)
-    group_var3 = GroupVar(key="ansible_user", value="dbadmin", group_id=group2.id)
+    group_var1 = GroupVar(var_name="ansible_user",
+                          var_value="admin", group_id=group1.id)
+    group_var2 = GroupVar(var_name="http_port",
+                          var_value="80", group_id=group1.id)
+    group_var3 = GroupVar(var_name="ansible_user",
+                          var_value="dbadmin", group_id=group2.id)
     session.add(group_var1)
     session.add(group_var2)
     session.add(group_var3)
     session.commit()
 
     # Criar variáveis de host
-    host_var1 = HostVar(key="ansible_host", value="192.168.1.10", host_id=host1.id)
-    host_var2 = HostVar(key="http_port", value="8080", host_id=host1.id)
+    host_var1 = HostVar(var_name="ansible_host",
+                        var_value="192.168.1.10", host_id=host1.id)
+    host_var2 = HostVar(var_name="http_port",
+                        var_value="8080", host_id=host1.id)
     session.add(host_var1)
     session.add(host_var2)
     session.commit()
@@ -104,6 +144,8 @@ def test_data_fixture(session: Session):
     }
 
 # Mock para autenticação durante os testes
+
+
 @pytest.fixture(name="mock_auth")
 def mock_auth_fixture():
     """Cria um mock para autenticação durante os testes."""

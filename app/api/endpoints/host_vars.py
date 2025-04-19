@@ -10,6 +10,7 @@ from app.services.host_service import HostService
 
 router = APIRouter()
 
+
 @router.post("/", response_model=HostVarRead, status_code=status.HTTP_201_CREATED)
 def create_host_var(host_var: HostVarCreate, session: Session = Depends(get_session)):
     # Verificar se o host existe
@@ -20,14 +21,14 @@ def create_host_var(host_var: HostVarCreate, session: Session = Depends(get_sess
             detail=f"Host com ID {host_var.host_id} não encontrado"
         )
 
-    # Verificar se já existe uma variável com a mesma chave para este host
-    existing_var = HostVarService.get_by_key_and_host(
-        session=session, key=host_var.key, host_id=host_var.host_id
+    # Verificar se já existe uma variável com o mesmo nome para este host
+    existing_var = HostVarService.get_by_name_and_host(
+        session=session, var_name=host_var.var_name, host_id=host_var.host_id
     )
     if existing_var:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Variável com a chave '{host_var.key}' já existe para este host"
+            detail=f"Variável com o nome '{host_var.var_name}' já existe para este host"
         )
 
     return HostVarService.create(session=session, host_var_create=host_var)
@@ -59,7 +60,8 @@ def read_host_var(var_id: int, session: Session = Depends(get_session)):
 
 @router.put("/{var_id}", response_model=HostVarRead)
 def update_host_var(var_id: int, var_update: HostVarUpdate, session: Session = Depends(get_session)):
-    db_var = HostVarService.update(session=session, var_id=var_id, var_update=var_update)
+    db_var = HostVarService.update(
+        session=session, var_id=var_id, var_update=var_update)
     if not db_var:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -42,8 +42,9 @@ O projeto segue uma arquitetura em camadas:
 
 - **groups**: Armazena informações sobre os grupos de hosts
 - **hosts**: Armazena informações sobre os hosts individuais
-- **group_vars**: Variáveis associadas a grupos específicos
-- **host_vars**: Variáveis associadas a hosts específicos
+- **group_vars**: Variáveis associadas a grupos específicos (campos: var_name, var_value)
+- **host_vars**: Variáveis associadas a hosts específicos (campos: var_name, var_value)
+- **host_group_membership**: Tabela de relacionamento que gerencia a relação muitos-para-muitos entre hosts e grupos
 
 ## 📋 Requisitos
 
@@ -182,7 +183,7 @@ python -m pytest app/tests/test_group_service.py
 ### Variáveis de grupo
 
 - `GET /api/v1/group-vars/group/{group_id}` - Listar variáveis de um grupo específico
-- `POST /api/v1/group-vars/` - Adicionar uma variável a um grupo
+- `POST /api/v1/group-vars/` - Adicionar uma variável a um grupo (usando var_name e var_value)
 - `GET /api/v1/group-vars/{var_id}` - Obter uma variável específica
 - `PUT /api/v1/group-vars/{var_id}` - Atualizar uma variável existente
 - `DELETE /api/v1/group-vars/{var_id}` - Remover uma variável
@@ -190,7 +191,7 @@ python -m pytest app/tests/test_group_service.py
 ### Variáveis de host
 
 - `GET /api/v1/host-vars/host/{host_id}` - Listar variáveis de um host específico
-- `POST /api/v1/host-vars/` - Adicionar uma variável a um host
+- `POST /api/v1/host-vars/` - Adicionar uma variável a um host (usando var_name e var_value)
 - `GET /api/v1/host-vars/{var_id}` - Obter uma variável específica
 - `PUT /api/v1/host-vars/{var_id}` - Atualizar uma variável existente
 - `DELETE /api/v1/host-vars/{var_id}` - Remover uma variável
@@ -207,3 +208,35 @@ Contribuições são bem-vindas! Por favor, leia nossas [diretrizes de contribui
 ## 📄 Licença
 
 Este projeto está licenciado sob a [Licença MIT](LICENSE).
+
+## 📚 Exemplos de Uso
+
+### Criando uma variável para um grupo
+
+```bash
+curl -X POST \
+  "http://localhost:8000/api/v1/group-vars/" \
+  -H "Authorization: Bearer seu-token-aqui" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "var_name": "ansible_python_interpreter", 
+    "var_value": "/usr/bin/python3", 
+    "is_encrypted": false,
+    "group_id": 1
+  }'
+```
+
+### Criando uma variável para um host
+
+```bash
+curl -X POST \
+  "http://localhost:8000/api/v1/host-vars/" \
+  -H "Authorization: Bearer seu-token-aqui" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "var_name": "ansible_user", 
+    "var_value": "ubuntu", 
+    "is_encrypted": false,
+    "host_id": 1
+  }'
+```

@@ -9,13 +9,15 @@ from app.services.host_service import HostService
 
 router = APIRouter()
 
+
 @router.post("/", response_model=HostRead, status_code=status.HTTP_201_CREATED)
 def create_host(host: HostCreate, session: Session = Depends(get_session)):
-    db_host = HostService.get_by_name(session, name=host.name)
+    # Corrigido para usar hostname em vez de name
+    db_host = HostService.get_by_hostname(session, hostname=host.hostname)
     if db_host:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Host com o nome '{host.name}' já existe"
+            detail=f"Host com o hostname '{host.hostname}' já existe"
         )
     return HostService.create(session=session, host_create=host)
 
@@ -28,7 +30,8 @@ def read_hosts(
     session: Session = Depends(get_session)
 ):
     if group_id:
-        hosts = HostService.get_by_group(session=session, group_id=group_id, skip=skip, limit=limit)
+        hosts = HostService.get_by_group(
+            session=session, group_id=group_id, skip=skip, limit=limit)
     else:
         hosts = HostService.get_all(session=session, skip=skip, limit=limit)
     return hosts
@@ -51,7 +54,8 @@ def update_host(
     host: HostUpdate,
     session: Session = Depends(get_session)
 ):
-    db_host = HostService.update(session=session, host_id=host_id, host_update=host)
+    db_host = HostService.update(
+        session=session, host_id=host_id, host_update=host)
     if db_host is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

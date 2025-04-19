@@ -10,6 +10,7 @@ from app.services.group_service import GroupService
 
 router = APIRouter()
 
+
 @router.post("/", response_model=GroupVarRead, status_code=status.HTTP_201_CREATED)
 def create_group_var(group_var: GroupVarCreate, session: Session = Depends(get_session)):
     # Verificar se o grupo existe
@@ -20,14 +21,14 @@ def create_group_var(group_var: GroupVarCreate, session: Session = Depends(get_s
             detail=f"Grupo com ID {group_var.group_id} não encontrado"
         )
 
-    # Verificar se já existe uma variável com a mesma chave para este grupo
-    existing_var = GroupVarService.get_by_key_and_group(
-        session=session, key=group_var.key, group_id=group_var.group_id
+    # Verificar se já existe uma variável com o mesmo nome para este grupo
+    existing_var = GroupVarService.get_by_name_and_group(
+        session=session, var_name=group_var.var_name, group_id=group_var.group_id
     )
     if existing_var:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Variável com a chave '{group_var.key}' já existe para este grupo"
+            detail=f"Variável com o nome '{group_var.var_name}' já existe para este grupo"
         )
 
     return GroupVarService.create(session=session, group_var_create=group_var)
@@ -59,7 +60,8 @@ def read_group_var(var_id: int, session: Session = Depends(get_session)):
 
 @router.put("/{var_id}", response_model=GroupVarRead)
 def update_group_var(var_id: int, var_update: GroupVarUpdate, session: Session = Depends(get_session)):
-    db_var = GroupVarService.update(session=session, var_id=var_id, var_update=var_update)
+    db_var = GroupVarService.update(
+        session=session, var_id=var_id, var_update=var_update)
     if not db_var:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

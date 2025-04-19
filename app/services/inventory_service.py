@@ -1,7 +1,8 @@
 from typing import Dict, Any
 from sqlmodel import Session, select
 
-from app.models.inventory import Group, Host, GroupVar, HostVar
+from app.models.inventory import Group, Host, GroupVar, HostVar, HostGroupLink
+
 
 class InventoryService:
     @staticmethod
@@ -26,23 +27,27 @@ class InventoryService:
 
             # Adicionar variáveis do grupo
             for var in group.variables:
-                inventory[group_name]["vars"][var.key] = var.value
+                inventory[group_name]["vars"][var.var_name] = var.var_value
 
             # Adicionar hosts do grupo
             for host in group.hosts:
-                host_name = host.name
+                host_name = host.hostname
 
                 # Adicionar o host ao grupo
                 inventory[group_name]["hosts"][host_name] = {
-                    "ansible_host": host.ip_address
+                    "ansible_host": host.ansible_host
                 }
 
                 # Adicionar variáveis do host
                 for var in host.variables:
-                    inventory[group_name]["hosts"][host_name][var.key] = var.value
+                    inventory[group_name]["hosts"][host_name][var.var_name] = var.var_value
 
-        # Adicionar hosts sem grupo (all)
-        statement = select(Host).where(Host.group_id == None)
+        # Adicionar hosts sem grupo
+        # Subconsulta para obter IDs de hosts que têm grupos
+        host_ids_in_groups = select(HostGroupLink.host_id)
+
+        # Consulta para encontrar hosts que não estão na subconsulta (hosts sem grupos)
+        statement = select(Host).where(~Host.id.in_(host_ids_in_groups))
         ungrouped_hosts = session.exec(statement).all()
 
         if ungrouped_hosts:
@@ -53,16 +58,16 @@ class InventoryService:
                 }
 
             for host in ungrouped_hosts:
-                host_name = host.name
+                host_name = host.hostname
 
                 # Adicionar o host aos ungrouped
                 inventory["ungrouped"]["hosts"][host_name] = {
-                    "ansible_host": host.ip_address
+                    "ansible_host": host.ansible_host
                 }
 
                 # Adicionar variáveis do host
                 for var in host.variables:
-                    inventory["ungrouped"]["hosts"][host_name][var.key] = var.value
+                    inventory["ungrouped"]["hosts"][host_name][var.var_name] = var.var_value
 
         return {
             "all": {
