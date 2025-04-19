@@ -1,12 +1,13 @@
 from typing import List, Optional, Set
 from datetime import datetime
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, Column, DateTime
 
 # Tabela de relacionamento muitos-para-muitos entre hosts e groups
 
 
 class HostGroupLink(SQLModel, table=True):
     __tablename__ = "host_group_membership"
+    __mapper_args__ = {"confirm_deleted_rows": False}
 
     host_id: int = Field(foreign_key="hosts.id", primary_key=True)
     group_id: int = Field(foreign_key="groups.id", primary_key=True)
@@ -28,16 +29,22 @@ class Group(GroupBase, table=True):
     # Relacionamentos
     hosts: List["Host"] = Relationship(
         back_populates="groups",
-        link_model=HostGroupLink
+        link_model=HostGroupLink,
+        # Removido delete-orphan do cascade
+        sa_relationship_kwargs={"cascade": "all"}
     )
-    variables: List["GroupVar"] = Relationship(back_populates="group")
+    variables: List["GroupVar"] = Relationship(
+        back_populates="group",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
     # Auto-relacionamento para grupos pais/filhos
     parent: Optional["Group"] = Relationship(
         back_populates="children",
         sa_relationship_kwargs={"remote_side": "Group.id"}
     )
     children: List["Group"] = Relationship(
-        back_populates="parent"
+        back_populates="parent",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
 
@@ -59,9 +66,14 @@ class Host(HostBase, table=True):
     # Relacionamentos
     groups: List[Group] = Relationship(
         back_populates="hosts",
-        link_model=HostGroupLink
+        link_model=HostGroupLink,
+        # Removido delete-orphan do cascade
+        sa_relationship_kwargs={"cascade": "all"}
     )
-    variables: List["HostVar"] = Relationship(back_populates="host")
+    variables: List["HostVar"] = Relationship(
+        back_populates="host",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 
 class GroupVarBase(SQLModel):
@@ -73,13 +85,18 @@ class GroupVarBase(SQLModel):
 
 class GroupVar(GroupVarBase, table=True):
     __tablename__ = "group_vars"
+    __mapper_args__ = {"confirm_deleted_rows": False}
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: Optional[datetime] = Field(default=None)
-    updated_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime(timezone=True)))
 
-    # Relacionamento
-    group: Group = Relationship(back_populates="variables")
+    # Relacionamento - removido cascade do lado "many"
+    group: Group = Relationship(
+        back_populates="variables"
+    )
 
 
 class HostVarBase(SQLModel):
@@ -91,10 +108,15 @@ class HostVarBase(SQLModel):
 
 class HostVar(HostVarBase, table=True):
     __tablename__ = "host_vars"
+    __mapper_args__ = {"confirm_deleted_rows": False}
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: Optional[datetime] = Field(default=None)
-    updated_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime(timezone=True)))
 
-    # Relacionamento
-    host: Host = Relationship(back_populates="variables")
+    # Relacionamento - removido cascade do lado "many"
+    host: Host = Relationship(
+        back_populates="variables"
+    )

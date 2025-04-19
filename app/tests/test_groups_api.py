@@ -39,12 +39,12 @@ def test_update_group(client: TestClient, test_data, mock_auth):
     """Testa a atualização de um grupo via API."""
     group_id = test_data["groups"][0].id
     response = client.put(
-        f"/api/v1/groups/{group_id}"
-
+        f"/api/v1/groups/{group_id}",
+        json={"name": "webservers_updated"}
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["name"] == "webservers"  # Não alterado
+    assert data["name"] == "webservers_updated"
 
 
 def test_delete_group(client: TestClient, test_data, mock_auth):
