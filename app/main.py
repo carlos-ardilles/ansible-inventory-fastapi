@@ -9,10 +9,14 @@ from app.db.session import engine
 from app.api.endpoints import groups, hosts, group_vars, host_vars, inventory, auth
 
 # Criar as tabelas no banco de dados
+
+
 def create_tables():
     SQLModel.metadata.create_all(engine)
 
 # Definir o contexto lifespan para substituir on_event
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Código executado na inicialização (substitui @app.on_event("startup"))
@@ -45,6 +49,8 @@ app.add_middleware(
 api_router = APIRouter()
 
 # Endpoint para obter informações do usuário autenticado
+
+
 @api_router.get("/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     """Retorna informações sobre o usuário autenticado."""
@@ -63,6 +69,7 @@ api_router.include_router(
 
 # Adicionar o prefixo global da API
 app.include_router(api_router, prefix=f"/api/{settings.API_VERSION}")
+
 
 @app.get("/", include_in_schema=False)
 def root():
